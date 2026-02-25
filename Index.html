@@ -1,0 +1,175 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Road & Treatment Finder</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    
+    <script>
+        // CORE LOGIC - Defined early so buttons always work
+        let master = [];
+        let treats = [];
+        let curRoad = "";
+        let curKm = 0;
+
+        function changeTab(panelId, tabId) {
+            // Hide all panels
+            document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+            // Show selected panel
+            document.getElementById(panelId).style.display = 'block';
+            
+            // Update Tab styling
+            document.querySelectorAll('.tab').forEach(t => {
+                t.style.color = '#555';
+                t.style.borderBottom = 'none';
+            });
+            const activeTab = document.getElementById(tabId);
+            activeTab.style.color = '#27ae60';
+            activeTab.style.borderBottom = '4px solid #27ae60';
+        }
+
+        function toggleMenu() {
+            const d = document.getElementById('fileDrawer');
+            const o = document.getElementById('darkOverlay');
+            if (d.style.bottom === '0px') {
+                d.style.bottom = '-100%';
+                o.style.display = 'none';
+            } else {
+                d.style.bottom = '0px';
+                o.style.display = 'block';
+            }
+        }
+    </script>
+
+    <style>
+        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #121212; --card: #1e1e1e; }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .tabs { display: flex; background: #000; border-bottom: 1px solid #333; cursor: pointer; }
+        .tab { flex: 1; padding: 20px; text-align: center; font-weight: bold; color: #555; }
+        
+        .container { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+        .panel { width: 90%; text-align: center; display: none; }
+        
+        .label { font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        .val { font-size: 2.5rem; font-weight: bold; margin-bottom: 25px; word-wrap: break-word; }
+        .big { font-size: 5rem; color: var(--accent); }
+
+        .fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--card); border-radius: 20px 20px 0 0; padding: 30px 20px; box-sizing: border-box; transition: 0.4s; z-index: 999; border-top: 1px solid #444; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 998; }
+
+        .file-box { margin-bottom: 20px; text-align: left; }
+        input[type="file"] { margin-top: 10px; width: 100%; color: #ccc; }
+    </style>
+</head>
+<body>
+
+    <div class="tabs">
+        <div class="tab" id="t1" style="color: #27ae60; border-bottom: 4px solid #27ae60;" onclick="changeTab('p1', 't1')">ROAD & KM</div>
+        <div class="tab" id="t2" onclick="changeTab('p2', 't2')">TREATMENTS</div>
+    </div>
+
+    <div class="container">
+        <div id="p1" class="panel" style="display: block;">
+            <div class="label">Road Name</div>
+            <div id="road-display" class="val">Load Master CSV</div>
+            <div class="label">Chainage</div>
+            <div id="km-display" class="val big">0</div>
+        </div>
+
+        <div id="p2" class="panel">
+            <div class="label">Current KM</div>
+            <div id="km-ref" class="val" style="opacity: 0.5; font-size: 1.5rem;">0</div>
+            <div class="label">Treatment</div>
+            <div id="treat-display" class="val big" style="font-size: 2.2rem;">Load Treatments</div>
+            <div class="label">Range</div>
+            <div id="range-display" class="val">---</div>
+        </div>
+    </div>
+
+    <div class="fab" onclick="toggleMenu()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+    </div>
+
+    <div id="darkOverlay" class="overlay" onclick="toggleMenu()"></div>
+
+    <div id="fileDrawer" class="drawer">
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <strong>FILE SETTINGS</strong>
+            <span style="color:var(--accent); cursor:pointer;" onclick="toggleMenu()">DONE</span>
+        </div>
+        <div class="file-box">
+            <label>1. Master Road List (CSV)</label><br>
+            <input type="file" id="loadMaster" accept=".csv">
+        </div>
+        <div class="file-box">
+            <label>2. Treatment List (Excel/CSV)</label><br>
+            <input type="file" id="loadTreat" accept=".csv, .xlsx, .xls">
+        </div>
+    </div>
+
+    <script>
+        // FILE HANDLING
+        document.getElementById('loadMaster').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const lines = ev.target.result.split('\n').slice(1);
+                master = lines.map(l => {
+                    const c = l.split(',');
+                    return { km: c[0], lat: parseFloat(c[1]), lon: parseFloat(c[2]), road: c[4] };
+                }).filter(p => !isNaN(p.lat));
+                alert("Master list loaded! Starting GPS...");
+                startGPS();
+            };
+            reader.readAsText(e.target.files[0]);
+        });
+
+        document.getElementById('loadTreat').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const data = new Uint8Array(ev.target.result);
+                const wb = XLSX.read(data, {type: 'array'});
+                treats = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                alert("Treatments loaded!");
+            };
+            reader.readAsArrayBuffer(e.target.files[0]);
+        });
+
+        // GPS & MATCHING
+        function startGPS() {
+            navigator.geolocation.watchPosition(pos => {
+                let closest = null;
+                let minD = Infinity;
+                master.forEach(p => {
+                    const d = Math.hypot(pos.coords.latitude - p.lat, pos.coords.longitude - p.lon);
+                    if (d < minD) { minD = d; closest = p; }
+                });
+                if (closest) {
+                    curRoad = closest.road;
+                    curKm = parseFloat(closest.km);
+                    document.getElementById('road-display').innerText = curRoad;
+                    document.getElementById('km-display').innerText = curKm;
+                    document.getElementById('km-ref').innerText = curKm;
+                    checkTreat();
+                }
+            }, null, { enableHighAccuracy: true });
+        }
+
+        function checkTreat() {
+            if (treats.length === 0) return;
+            const match = treats.find(t => {
+                const rMatch = String(t.Road || "").toLowerCase().trim() === curRoad.toLowerCase().trim();
+                return rMatch && curKm >= parseFloat(t.Start || 0) && curKm <= parseFloat(t.End || 0);
+            });
+            if (match) {
+                document.getElementById('treat-display').innerText = match.Treatment;
+                document.getElementById('range-display').innerText = match.Start + " - " + match.End;
+            } else {
+                document.getElementById('treat-display').innerText = "Outside Treatment Area";
+            }
+        }
+    </script>
+</body>
+</html>
