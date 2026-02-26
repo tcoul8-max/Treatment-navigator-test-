@@ -18,7 +18,7 @@
         .big { font-size: 4.5rem; color: var(--accent); line-height: 1; margin: 10px 0; }
         .info-card { background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-top: 15px; }
         .dir-text { color: #f1c40f; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; }
-        .rem-val { font-size: 2rem; font-weight: 800; }
+        .rem-val { font-size: 2.2rem; font-weight: 800; color: #fff; }
         .fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--card); border-radius: 25px 25px 0 0; padding: 30px 20px; box-sizing: border-box; transition: 0.4s; z-index: 999; border-top: 1px solid #444; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 998; }
@@ -41,13 +41,13 @@
         </div>
 
         <div id="p2" class="panel">
-            <div class="label">Treatment</div>
-            <div id="treat-display" class="val" style="color: var(--accent); min-height: 60px;">---</div>
+            <div class="label">Active Treatment</div>
+            <div id="treat-display" class="val" style="color: var(--accent); min-height: 60px; font-size: 1.8rem;">---</div>
             <div class="info-card">
-                <div id="dir-label" class="dir-text">Awaiting Movement</div>
+                <div id="dir-label" class="dir-text">Standing Still</div>
                 <div class="label">Distance to Boundary</div>
                 <div id="rem-display" class="rem-val">0m</div>
-                <div id="range-display" style="font-size: 0.8rem; color: #666; margin-top: 5px;">---</div>
+                <div id="range-display" style="font-size: 0.8rem; color: #666; margin-top: 5px;">Range: ---</div>
             </div>
         </div>
         <div class="status-bar" id="gps-log">Ready: Load Master & Treatment</div>
@@ -62,7 +62,7 @@
         <strong>LOAD DATA</strong><br><br>
         <label class="label">1. Master GPS (CSV)</label><input type="file" id="fM" accept=".csv" style="width:100%; margin:10px 0 20px 0;">
         <label class="label">2. Treatment (Excel/CSV)</label><input type="file" id="fT" accept=".csv, .xlsx, .xls" style="width:100%; margin:10px 0 20px 0;">
-        <button onclick="toggleMenu()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; font-weight:bold; border-radius:12px;">START</button>
+        <button onclick="toggleMenu()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; font-weight:bold; border-radius:12px;">CLOSE & START</button>
     </div>
 
 <script>
@@ -88,7 +88,6 @@
         o.style.display = isOpen ? 'none' : 'block';
     }
 
-    // Helper to clean road names for matching (e.g., "Mallinsons Road" becomes "mallinsons")
     function cleanName(n) {
         return String(n || "").toLowerCase()
             .replace(/\broad\b|\brd\b|\blane\b|\bln\b|\bstreet\b|\bst\b/g, '')
@@ -148,7 +147,6 @@
 
         const match = treats.find(t => {
             const keys = Object.keys(t);
-            // Search specifically for Road, Start, End in your MTGF file structure
             const rVal = cleanName(t[keys[0]] || t["Road"] || t["Asset / Road name"]);
             const start = parseFloat(t[keys[1]] || t["Start"] || 0);
             const end = parseFloat(t[keys[2]] || t["End"] || 0);
@@ -161,18 +159,30 @@
             const end = parseFloat(match[keys[2]] || match["End"]);
             const name = match[keys[3]] || match["Treatment"];
 
-            let dir = "Standing Still";
+            // --- COUNTER LOGIC ---
             let rem = 0;
-            if (curKm > lastKm) { dir = "Forward"; rem = Math.round(end - curKm); }
-            else if (curKm < lastKm) { dir = "Backward"; rem = Math.round(curKm - start); }
+            let dir = "Awaiting Movement";
+
+            if (curKm > lastKm) { 
+                dir = "Forward (Increasing)"; 
+                rem = Math.round(end - curKm); 
+            } else if (curKm < lastKm) { 
+                dir = "Backward (Decreasing)"; 
+                rem = Math.round(curKm - start); 
+            } else {
+                dir = "Standing Still";
+                rem = Math.round(end - curKm); 
+            }
 
             document.getElementById('treat-display').innerText = name;
             document.getElementById('dir-label').innerText = dir;
             document.getElementById('rem-display').innerText = Math.abs(rem) + "m";
-            document.getElementById('range-display').innerText = `${start} - ${end}`;
+            document.getElementById('range-display').innerText = `Range: ${start} - ${end}`;
         } else {
             document.getElementById('treat-display').innerText = "No Active Treatment";
+            document.getElementById('dir-label').innerText = "---";
             document.getElementById('rem-display').innerText = "---";
+            document.getElementById('range-display').innerText = "---";
         }
     }
 </script>
