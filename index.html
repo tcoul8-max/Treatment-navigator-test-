@@ -9,24 +9,18 @@
     <style>
         :root { --accent: #27ae60; --bg: #121212; --card: #1e1e1e; }
         body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
         .tabs { display: flex; background: #000; border-bottom: 1px solid #333; }
-        .tab { flex: 1; padding: 20px; text-align: center; font-weight: bold; color: #555; cursor: pointer; transition: 0.3s; }
-        
+        .tab { flex: 1; padding: 20px; text-align: center; font-weight: bold; color: #555; cursor: pointer; }
         .container { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
         .panel { width: 90%; text-align: center; display: none; }
-        
-        .label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .label { font-size: 0.8rem; color: #888; text-transform: uppercase; }
         .val { font-size: 2rem; font-weight: bold; margin-bottom: 15px; word-wrap: break-word; }
         .big { font-size: 4.5rem; color: var(--accent); line-height: 1; margin: 10px 0; }
-        
-        /* Direction & Remaining Box */
         .info-card { background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-top: 15px; }
-        .dir-text { color: #f1c40f; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; margin-bottom: 5px; }
-        .rem-val { font-size: 2rem; font-weight: 800; color: #fff; }
-
-        .fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; }
-        .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--card); border-radius: 25px 25px 0 0; padding: 30px 20px; box-sizing: border-box; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 999; border-top: 1px solid #444; }
+        .dir-text { color: #f1c40f; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; }
+        .rem-val { font-size: 2rem; font-weight: 800; }
+        .fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--card); border-radius: 25px 25px 0 0; padding: 30px 20px; box-sizing: border-box; transition: 0.4s; z-index: 999; border-top: 1px solid #444; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 998; }
         .status-bar { position: absolute; bottom: 10px; width: 100%; text-align: center; font-size: 0.7rem; color: #555; }
     </style>
@@ -34,31 +28,29 @@
 <body>
 
     <div class="tabs">
-        <div class="tab" id="t1" style="color: var(--accent); border-bottom: 4px solid var(--accent);" onclick="changeTab('p1', 't1')">GPS LOCATION</div>
+        <div class="tab" id="t1" style="color: var(--accent); border-bottom: 4px solid var(--accent);" onclick="changeTab('p1', 't1')">GPS</div>
         <div class="tab" id="t2" onclick="changeTab('p2', 't2')">TREATMENT</div>
     </div>
 
     <div class="container">
         <div id="p1" class="panel" style="display: block;">
-            <div class="label">Current Road</div>
+            <div class="label">Road</div>
             <div id="road-display" class="val">---</div>
-            <div class="label">Chainage (KM)</div>
+            <div class="label">Chainage</div>
             <div id="km-display" class="val big">0.000</div>
         </div>
 
         <div id="p2" class="panel">
-            <div class="label">Active Treatment</div>
-            <div id="treat-display" class="val" style="color: var(--accent); font-size: 1.8rem; min-height: 60px;">---</div>
-            
+            <div class="label">Treatment</div>
+            <div id="treat-display" class="val" style="color: var(--accent); min-height: 60px;">---</div>
             <div class="info-card">
-                <div id="dir-label" class="dir-text">Standing Still</div>
+                <div id="dir-label" class="dir-text">Awaiting Movement</div>
                 <div class="label">Distance to Boundary</div>
                 <div id="rem-display" class="rem-val">0m</div>
-                <div id="range-display" style="font-size: 0.8rem; color: #666; margin-top: 5px;">Range: ---</div>
+                <div id="range-display" style="font-size: 0.8rem; color: #666; margin-top: 5px;">---</div>
             </div>
         </div>
-
-        <div class="status-bar" id="gps-log">Ready: Please load files</div>
+        <div class="status-bar" id="gps-log">Ready: Load Master & Treatment</div>
     </div>
 
     <div class="fab" onclick="toggleMenu()">
@@ -66,16 +58,11 @@
     </div>
 
     <div id="darkOverlay" class="overlay" onclick="toggleMenu()"></div>
-
     <div id="fileDrawer" class="drawer">
-        <strong style="font-size: 1.2rem;">DATA SETTINGS</strong><br><br>
-        <label class="label">1. Master Points (CSV)</label>
-        <input type="file" id="fM" accept=".csv" style="width:100%; margin:10px 0 20px 0; color: #888;">
-        
-        <label class="label">2. Treatment Guide (Excel or CSV)</label>
-        <input type="file" id="fT" accept=".csv, .xlsx, .xls" style="width:100%; margin:10px 0 20px 0; color: #888;">
-        
-        <button onclick="toggleMenu()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; font-weight:bold; border-radius:12px; font-size:1rem;">CLOSE & START</button>
+        <strong>LOAD DATA</strong><br><br>
+        <label class="label">1. Master GPS (CSV)</label><input type="file" id="fM" accept=".csv" style="width:100%; margin:10px 0 20px 0;">
+        <label class="label">2. Treatment (Excel/CSV)</label><input type="file" id="fT" accept=".csv, .xlsx, .xls" style="width:100%; margin:10px 0 20px 0;">
+        <button onclick="toggleMenu()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; font-weight:bold; border-radius:12px;">START</button>
     </div>
 
 <script>
@@ -85,7 +72,6 @@
     let curKm = 0;
     let lastKm = 0;
 
-    // --- INTERFACE ---
     function changeTab(panelId, tabId) {
         document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
         document.getElementById(panelId).style.display = 'block';
@@ -102,7 +88,13 @@
         o.style.display = isOpen ? 'none' : 'block';
     }
 
-    // --- UNIVERSAL FILE LOADER ---
+    // Helper to clean road names for matching (e.g., "Mallinsons Road" becomes "mallinsons")
+    function cleanName(n) {
+        return String(n || "").toLowerCase()
+            .replace(/\broad\b|\brd\b|\blane\b|\bln\b|\bstreet\b|\bst\b/g, '')
+            .replace(/\s+/g, '').trim();
+    }
+
     async function loadAnyFile(file) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -110,7 +102,6 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                // Convert to JSON, skipping empty rows automatically
                 resolve(XLSX.utils.sheet_to_json(sheet, { defval: "" }));
             };
             reader.readAsArrayBuffer(file);
@@ -119,37 +110,31 @@
 
     document.getElementById('fM').addEventListener('change', async (e) => {
         const raw = await loadAnyFile(e.target.files[0]);
-        // Map master coordinates - looks for km, lat, lon, road
         master = raw.map(r => {
             const keys = Object.keys(r);
             return { km: r[keys[0]], lat: parseFloat(r[keys[1]]), lon: parseFloat(r[keys[2]]), road: r[keys[4]] };
         }).filter(p => !isNaN(p.lat));
-        document.getElementById('gps-log').innerText = "Points loaded. Starting GPS...";
+        document.getElementById('gps-log').innerText = "Master loaded.";
         startGPS();
     });
 
     document.getElementById('fT').addEventListener('change', async (e) => {
         treats = await loadAnyFile(e.target.files[0]);
-        document.getElementById('gps-log').innerText = "Treatments loaded.";
+        document.getElementById('gps-log').innerText = "Treatment loaded.";
     });
 
-    // --- LOGIC ---
     function startGPS() {
         navigator.geolocation.watchPosition(pos => {
-            document.getElementById('gps-log').innerText = `GPS Active (${Math.round(pos.coords.accuracy)}m)`;
             let closest = null;
             let minD = Infinity;
-
             master.forEach(p => {
                 const d = Math.hypot(pos.coords.latitude - p.lat, pos.coords.longitude - p.lon);
                 if (d < minD) { minD = d; closest = p; }
             });
-
             if (closest) {
                 lastKm = curKm;
                 curRoad = closest.road;
                 curKm = parseFloat(closest.km);
-                
                 document.getElementById('road-display').innerText = curRoad;
                 document.getElementById('km-display').innerText = curKm.toFixed(3);
                 updateTreatment();
@@ -159,42 +144,35 @@
 
     function updateTreatment() {
         if (treats.length === 0) return;
+        const cleanedCurRoad = cleanName(curRoad);
 
         const match = treats.find(t => {
-            // Smart Search for column names in your MTGF file
             const keys = Object.keys(t);
-            const rVal = String(t[keys[3]] || t["Road"] || "").toLowerCase().trim();
-            const start = parseFloat(t[keys[4]] || t["Start"] || 0);
-            const end = parseFloat(t[keys[5]] || t["End"] || 0);
-            return rVal === curRoad.toLowerCase().trim() && curKm >= start && curKm <= end;
+            // Search specifically for Road, Start, End in your MTGF file structure
+            const rVal = cleanName(t[keys[0]] || t["Road"] || t["Asset / Road name"]);
+            const start = parseFloat(t[keys[1]] || t["Start"] || 0);
+            const end = parseFloat(t[keys[2]] || t["End"] || 0);
+            return rVal === cleanedCurRoad && curKm >= start && curKm <= end;
         });
 
         if (match) {
             const keys = Object.keys(match);
-            const start = parseFloat(match[keys[4]] || match["Start"]);
-            const end = parseFloat(match[keys[5]] || match["End"]);
-            const name = match[keys[10]] || match["Treatment"];
+            const start = parseFloat(match[keys[1]] || match["Start"]);
+            const end = parseFloat(match[keys[2]] || match["End"]);
+            const name = match[keys[3]] || match["Treatment"];
 
-            // Direction Logic
-            let direction = "Standing Still";
-            let remaining = 0;
-
-            if (curKm > lastKm) {
-                direction = "Forward (Increasing)";
-                remaining = Math.round(end - curKm);
-            } else if (curKm < lastKm) {
-                direction = "Backward (Decreasing)";
-                remaining = Math.round(curKm - start);
-            }
+            let dir = "Standing Still";
+            let rem = 0;
+            if (curKm > lastKm) { dir = "Forward"; rem = Math.round(end - curKm); }
+            else if (curKm < lastKm) { dir = "Backward"; rem = Math.round(curKm - start); }
 
             document.getElementById('treat-display').innerText = name;
-            document.getElementById('dir-label').innerText = direction;
-            document.getElementById('rem-display').innerText = remaining + "m";
-            document.getElementById('range-display').innerText = `Range: ${start} - ${end}`;
+            document.getElementById('dir-label').innerText = dir;
+            document.getElementById('rem-display').innerText = Math.abs(rem) + "m";
+            document.getElementById('range-display').innerText = `${start} - ${end}`;
         } else {
             document.getElementById('treat-display').innerText = "No Active Treatment";
             document.getElementById('rem-display').innerText = "---";
-            document.getElementById('dir-label').innerText = "---";
         }
     }
 </script>
