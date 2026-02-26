@@ -1,4 +1,4 @@
-<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,19 +7,14 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     
     <script>
-        // CORE LOGIC - Defined early so buttons always work
         let master = [];
         let treats = [];
         let curRoad = "";
         let curKm = 0;
 
         function changeTab(panelId, tabId) {
-            // Hide all panels
             document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
-            // Show selected panel
             document.getElementById(panelId).style.display = 'block';
-            
-            // Update Tab styling
             document.querySelectorAll('.tab').forEach(t => {
                 t.style.color = '#555';
                 t.style.borderBottom = 'none';
@@ -32,61 +27,51 @@
         function toggleMenu() {
             const d = document.getElementById('fileDrawer');
             const o = document.getElementById('darkOverlay');
-            if (d.style.bottom === '0px') {
-                d.style.bottom = '-100%';
-                o.style.display = 'none';
-            } else {
-                d.style.bottom = '0px';
-                o.style.display = 'block';
-            }
+            const isOpen = d.style.bottom === '0px';
+            d.style.bottom = isOpen ? '-100%' : '0px';
+            o.style.display = isOpen ? 'none' : 'block';
         }
     </script>
 
     <style>
-        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #121212; --card: #1e1e1e; }
+        :root { --accent: #27ae60; --bg: #121212; --card: #1e1e1e; }
         body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        .tabs { display: flex; background: #000; border-bottom: 1px solid #333; cursor: pointer; }
-        .tab { flex: 1; padding: 20px; text-align: center; font-weight: bold; color: #555; }
-        
+        .tabs { display: flex; background: #000; border-bottom: 1px solid #333; }
+        .tab { flex: 1; padding: 20px; text-align: center; font-weight: bold; color: #555; cursor: pointer; }
         .container { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
         .panel { width: 90%; text-align: center; display: none; }
-        
-        .label { font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-        .val { font-size: 2.5rem; font-weight: bold; margin-bottom: 25px; word-wrap: break-word; }
-        .big { font-size: 5rem; color: var(--accent); }
-
-        .fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .label { font-size: 0.8rem; color: #888; text-transform: uppercase; }
+        .val { font-size: 2.2rem; font-weight: bold; margin-bottom: 20px; word-wrap: break-word; }
+        .big { font-size: 4.5rem; color: var(--accent); }
+        .fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--card); border-radius: 20px 20px 0 0; padding: 30px 20px; box-sizing: border-box; transition: 0.4s; z-index: 999; border-top: 1px solid #444; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 998; }
-
-        .file-box { margin-bottom: 20px; text-align: left; }
-        input[type="file"] { margin-top: 10px; width: 100%; color: #ccc; }
+        .status-bar { position: absolute; bottom: 10px; width: 100%; text-align: center; font-size: 0.7rem; color: #444; }
     </style>
 </head>
 <body>
 
     <div class="tabs">
-        <div class="tab" id="t1" style="color: #27ae60; border-bottom: 4px solid #27ae60;" onclick="changeTab('p1', 't1')">ROAD & KM</div>
+        <div class="tab" id="t1" style="color: var(--accent); border-bottom: 4px solid var(--accent);" onclick="changeTab('p1', 't1')">ROAD & KM</div>
         <div class="tab" id="t2" onclick="changeTab('p2', 't2')">TREATMENTS</div>
     </div>
 
     <div class="container">
         <div id="p1" class="panel" style="display: block;">
             <div class="label">Road Name</div>
-            <div id="road-display" class="val">Load Master CSV</div>
+            <div id="road-display" class="val">Load Data...</div>
             <div class="label">Chainage</div>
             <div id="km-display" class="val big">0</div>
         </div>
 
         <div id="p2" class="panel">
-            <div class="label">Current KM</div>
-            <div id="km-ref" class="val" style="opacity: 0.5; font-size: 1.5rem;">0</div>
             <div class="label">Treatment</div>
-            <div id="treat-display" class="val big" style="font-size: 2.2rem;">Load Treatments</div>
-            <div class="label">Range</div>
+            <div id="treat-display" class="val" style="color: var(--accent); min-height: 80px;">---</div>
+            <div class="label">Current Range</div>
             <div id="range-display" class="val">---</div>
         </div>
+
+        <div class="status-bar" id="gps-log">Status: Waiting for files...</div>
     </div>
 
     <div class="fab" onclick="toggleMenu()">
@@ -96,23 +81,17 @@
     <div id="darkOverlay" class="overlay" onclick="toggleMenu()"></div>
 
     <div id="fileDrawer" class="drawer">
-        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-            <strong>FILE SETTINGS</strong>
-            <span style="color:var(--accent); cursor:pointer;" onclick="toggleMenu()">DONE</span>
-        </div>
-        <div class="file-box">
-            <label>1. Master Road List (CSV)</label><br>
-            <input type="file" id="loadMaster" accept=".csv">
-        </div>
-        <div class="file-box">
-            <label>2. Treatment List (Excel/CSV)</label><br>
-            <input type="file" id="loadTreat" accept=".csv, .xlsx, .xls">
-        </div>
+        <strong>LOAD FILES</strong><br><br>
+        <label>1. Master CSV (Coordinates)</label>
+        <input type="file" id="fM" accept=".csv" style="width:100%; margin:10px 0;">
+        <label>2. Treatment List (Scope CSV)</label>
+        <input type="file" id="fT" accept=".csv" style="width:100%; margin:10px 0;">
+        <button onclick="toggleMenu()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; font-weight:bold; border-radius:10px;">DONE</button>
     </div>
 
     <script>
-        // FILE HANDLING
-        document.getElementById('loadMaster').addEventListener('change', function(e) {
+        // MASTER FILE (Coordinates)
+        document.getElementById('fM').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = (ev) => {
                 const lines = ev.target.result.split('\n').slice(1);
@@ -120,26 +99,35 @@
                     const c = l.split(',');
                     return { km: c[0], lat: parseFloat(c[1]), lon: parseFloat(c[2]), road: c[4] };
                 }).filter(p => !isNaN(p.lat));
-                alert("Master list loaded! Starting GPS...");
+                document.getElementById('gps-log').innerText = "Master loaded. Starting GPS...";
                 startGPS();
             };
             reader.readAsText(e.target.files[0]);
         });
 
-        document.getElementById('loadTreat').addEventListener('change', function(e) {
+        // TREATMENT FILE (Mallinsons MTGF)
+        document.getElementById('fT').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = (ev) => {
-                const data = new Uint8Array(ev.target.result);
-                const wb = XLSX.read(data, {type: 'array'});
-                treats = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                alert("Treatments loaded!");
+                // Parse CSV text directly
+                const rows = ev.target.result.split('\n').map(r => r.split(','));
+                // Find where the actual headers start (ignoring empty first row)
+                const headerRowIndex = rows.findIndex(r => r.join('').includes("Road name"));
+                if (headerRowIndex === -1) {
+                    alert("Could not find headers in Treatment file. Check Row 2.");
+                    return;
+                }
+                // Store only the data rows after headers
+                treats = rows.slice(headerRowIndex + 1);
+                document.getElementById('gps-log').innerText = "Treatments loaded.";
+                toggleMenu();
             };
-            reader.readAsArrayBuffer(e.target.files[0]);
+            reader.readAsText(e.target.files[0]);
         });
 
-        // GPS & MATCHING
         function startGPS() {
             navigator.geolocation.watchPosition(pos => {
+                document.getElementById('gps-log').innerText = "GPS Active: Accuracy " + Math.round(pos.coords.accuracy) + "m";
                 let closest = null;
                 let minD = Infinity;
                 master.forEach(p => {
@@ -151,7 +139,6 @@
                     curKm = parseFloat(closest.km);
                     document.getElementById('road-display').innerText = curRoad;
                     document.getElementById('km-display').innerText = curKm;
-                    document.getElementById('km-ref').innerText = curKm;
                     checkTreat();
                 }
             }, null, { enableHighAccuracy: true });
@@ -159,15 +146,26 @@
 
         function checkTreat() {
             if (treats.length === 0) return;
-            const match = treats.find(t => {
-                const rMatch = String(t.Road || "").toLowerCase().trim() === curRoad.toLowerCase().trim();
-                return rMatch && curKm >= parseFloat(t.Start || 0) && curKm <= parseFloat(t.End || 0);
+            
+            // Search rows based on column index for your MTGF file:
+            // Column 3: Road Name
+            // Column 4: Start Chainage
+            // Column 5: End Chainage
+            // Column 10: Treatment Type
+            const match = treats.find(row => {
+                if (row.length < 10) return false;
+                const roadInFile = String(row[3] || "").toLowerCase().trim();
+                const start = parseFloat(row[4] || 0);
+                const end = parseFloat(row[5] || 0);
+                return roadInFile === curRoad.toLowerCase().trim() && curKm >= start && curKm <= end;
             });
+
             if (match) {
-                document.getElementById('treat-display').innerText = match.Treatment;
-                document.getElementById('range-display').innerText = match.Start + " - " + match.End;
+                document.getElementById('treat-display').innerText = match[10];
+                document.getElementById('range-display').innerText = match[4] + " - " + match[5];
             } else {
-                document.getElementById('treat-display').innerText = "Outside Treatment Area";
+                document.getElementById('treat-display').innerText = "No Treatment for this KM";
+                document.getElementById('range-display').innerText = "---";
             }
         }
     </script>
