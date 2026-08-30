@@ -1,199 +1,270 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Road Tracker</title>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    
-    <style>
-        :root { --accent: #27ae60; --bg: #121212; --card: #1e1e1e; --warning: #e74c3c; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .tabs { display: flex; background: #000; border-bottom: 1px solid #333; }
-        .tab { flex: 1; padding: 20px; text-align: center; font-weight: bold; color: #555; cursor: pointer; }
-        .container { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
-        .panel { width: 90%; text-align: center; display: none; }
-        .label { font-size: 0.8rem; color: #888; text-transform: uppercase; }
-        .val { font-size: 2rem; font-weight: bold; margin-bottom: 15px; word-wrap: break-word; }
-        .big { font-size: 5.5rem; color: var(--accent); line-height: 1; margin: 10px 0; }
-        .info-card { background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-top: 15px; }
-        .dir-text { color: #f1c40f; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; }
-        .rem-val { font-size: 2.8rem; font-weight: 800; color: #fff; transition: color 0.3s; }
-        .proximity-alert { color: var(--warning) !important; }
-        .fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--card); border-radius: 25px 25px 0 0; padding: 30px 20px; box-sizing: border-box; transition: 0.4s; z-index: 999; border-top: 1px solid #444; }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 998; }
-        .status-bar { position: absolute; bottom: 10px; width: 100%; text-align: center; font-size: 0.7rem; color: #555; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stable Diffusion Progress</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 2rem;
+      font-family: Arial, sans-serif;
+      background: #171717;
+      color: #f5f5f5;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+    }
+
+    h1 {
+      margin-bottom: 1.5rem;
+    }
+
+    .settings,
+    .card {
+      background: #242424;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.4rem;
+      color: #bbb;
+    }
+
+    input {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 0.7rem;
+      border: 1px solid #555;
+      border-radius: 6px;
+      background: #111;
+      color: white;
+      font-size: 1rem;
+    }
+
+    .progress-container {
+      height: 28px;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #111;
+      margin: 1rem 0;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #4caf50;
+      transition: width 0.4s ease;
+      font-weight: bold;
+      color: white;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      text-align: center;
+    }
+
+    .stat {
+      padding: 1rem 0.5rem;
+      border-radius: 8px;
+      background: #303030;
+    }
+
+    .stat-value {
+      display: block;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-label {
+      color: #aaa;
+      font-size: 0.85rem;
+    }
+
+    #status {
+      color: #aaa;
+      margin-top: 1rem;
+    }
+
+    #error {
+      color: #ff7777;
+      margin-top: 0.5rem;
+      white-space: pre-wrap;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+      max-height: 300px;
+      margin: 1rem auto 0;
+      border-radius: 8px;
+    }
+  </style>
 </head>
+
 <body>
+  <main class="container">
+    <h1>Stable Diffusion Progress</h1>
 
-    <div class="tabs">
-        <div class="tab" id="t1" style="color: var(--accent); border-bottom: 4px solid var(--accent);" onclick="changeTab('p1', 't1')">GPS</div>
-        <div class="tab" id="t2" onclick="changeTab('p2', 't2')">TREATMENT</div>
-    </div>
+    <section class="settings">
+      <label for="apiUrl">Stable Diffusion API URL</label>
+      <input
+        id="apiUrl"
+        value="http://127.0.0.1:7860"
+        placeholder="http://127.0.0.1:7860"
+      />
+    </section>
 
-    <div class="container">
-        <div id="p1" class="panel" style="display: block;">
-            <div class="label">Road</div>
-            <div id="road-display" class="val">---</div>
-            <div class="label">Chainage</div>
-            <div id="km-display" class="val big">0</div>
+    <section class="card">
+      <div class="progress-container">
+        <div id="progressBar" class="progress-bar">0%</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <span id="overallPercent" class="stat-value">0%</span>
+          <span class="stat-label">Overall progress</span>
         </div>
 
-        <div id="p2" class="panel">
-            <div class="label">Active Treatment</div>
-            <div id="treat-display" class="val" style="color: var(--accent); min-height: 60px; font-size: 1.8rem;">---</div>
-            <div class="info-card">
-                <div id="dir-label" class="dir-text">Awaiting Movement</div>
-                <div class="label">Distance to Boundary</div>
-                <div id="rem-display" class="rem-val">0m</div>
-                <div id="range-display" style="font-size: 0.8rem; color: #666; margin-top: 5px;">Range: ---</div>
-            </div>
+        <div class="stat">
+          <span id="completedImages" class="stat-value">0</span>
+          <span class="stat-label">Images completed</span>
         </div>
-        <div class="status-bar" id="gps-log">Ready: Load Files</div>
-    </div>
 
-    <div class="fab" onclick="toggleMenu()">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-    </div>
+        <div class="stat">
+          <span id="totalImages" class="stat-value">0</span>
+          <span class="stat-label">Total images</span>
+        </div>
+      </div>
 
-    <div id="darkOverlay" class="overlay" onclick="toggleMenu()"></div>
-    <div id="fileDrawer" class="drawer">
-        <strong>LOAD DATA</strong><br><br>
-        <label class="label">1. Master GPS (CSV)</label><input type="file" id="fM" accept=".csv" style="width:100%; margin:10px 0 20px 0;">
-        <label class="label">2. Treatment (Excel/CSV)</label><input type="file" id="fT" accept=".csv, .xlsx, .xls" style="width:100%; margin:10px 0 20px 0;">
-        <button onclick="toggleMenu()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; font-weight:bold; border-radius:12px;">CLOSE & START</button>
-    </div>
+      <div id="status">Waiting for generation...</div>
+      <div id="error"></div>
 
-<script>
-    let master = [];
-    let treats = [];
-    let curRoad = "";
-    let curKm = 0;
-    let lastKm = 0;
+      <img id="previewImage" alt="Current Stable Diffusion preview" hidden />
+    </section>
+  </main>
 
-    function changeTab(panelId, tabId) {
-        document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
-        document.getElementById(panelId).style.display = 'block';
-        document.querySelectorAll('.tab').forEach(t => { t.style.color = '#555'; t.style.borderBottom = 'none'; });
-        document.getElementById(tabId).style.color = '#27ae60';
-        document.getElementById(tabId).style.borderBottom = '4px solid #27ae60';
+  <script>
+    const apiUrlInput = document.getElementById("apiUrl");
+    const progressBar = document.getElementById("progressBar");
+    const overallPercent = document.getElementById("overallPercent");
+    const completedImages = document.getElementById("completedImages");
+    const totalImages = document.getElementById("totalImages");
+    const status = document.getElementById("status");
+    const errorBox = document.getElementById("error");
+    const previewImage = document.getElementById("previewImage");
+
+    function getApiUrl() {
+      return apiUrlInput.value.trim().replace(/\/+$/, "");
     }
 
-    function toggleMenu() {
-        const d = document.getElementById('fileDrawer');
-        const o = document.getElementById('darkOverlay');
-        const isOpen = d.style.bottom === '0px';
-        d.style.bottom = isOpen ? '-100%' : '0px';
-        o.style.display = isOpen ? 'none' : 'block';
+    function setProgress(percent) {
+      const safePercent = Math.max(0, Math.min(100, percent));
+      const roundedPercent = Math.round(safePercent);
+
+      progressBar.style.width = `${safePercent}%`;
+      progressBar.textContent = `${roundedPercent}%`;
+      overallPercent.textContent = `${roundedPercent}%`;
     }
 
-    function cleanName(n) {
-        return String(n || "").toLowerCase()
-            .replace(/\broad\b|\brd\b|\blane\b|\bln\b|\bstreet\b|\bst\b/g, '')
-            .replace(/\s+/g, '').trim();
+    function base64ToDataUrl(base64) {
+      if (!base64) return "";
+      return base64.startsWith("data:image")
+        ? base64
+        : `data:image/jpeg;base64,${base64}`;
     }
 
-    async function loadAnyFile(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                resolve(XLSX.utils.sheet_to_json(sheet, { defval: "" }));
-            };
-            reader.readAsArrayBuffer(file);
-        });
-    }
+    async function updateProgress() {
+      try {
+        const response = await fetch(
+          `${getApiUrl()}/sdapi/v1/progress?skip_current_image=false`,
+          {
+            cache: "no-store"
+          }
+        );
 
-    document.getElementById('fM').addEventListener('change', async (e) => {
-        const raw = await loadAnyFile(e.target.files[0]);
-        master = raw.map(r => {
-            const keys = Object.keys(r);
-            return { km: r[keys[0]], lat: parseFloat(r[keys[1]]), lon: parseFloat(r[keys[2]]), road: r[keys[4]] };
-        }).filter(p => !isNaN(p.lat));
-        document.getElementById('gps-log').innerText = "Master loaded.";
-        startGPS();
-    });
-
-    document.getElementById('fT').addEventListener('change', async (e) => {
-        treats = await loadAnyFile(e.target.files[0]);
-        document.getElementById('gps-log').innerText = "Treatment loaded.";
-    });
-
-    function startGPS() {
-        navigator.geolocation.watchPosition(pos => {
-            let closest = null;
-            let minD = Infinity;
-            master.forEach(p => {
-                const d = Math.hypot(pos.coords.latitude - p.lat, pos.coords.longitude - p.lon);
-                if (d < minD) { minD = d; closest = p; }
-            });
-            if (closest) {
-                lastKm = curKm;
-                curRoad = closest.road;
-                curKm = parseFloat(closest.km);
-                document.getElementById('road-display').innerText = curRoad;
-                // REMOVED DECIMALS HERE
-                document.getElementById('km-display').innerText = Math.round(curKm);
-                updateTreatment();
-            }
-        }, null, { enableHighAccuracy: true });
-    }
-
-    function updateTreatment() {
-        if (treats.length === 0) return;
-        const cleanedCurRoad = cleanName(curRoad);
-
-        const match = treats.find(t => {
-            const keys = Object.keys(t);
-            const rVal = cleanName(t[keys[0]] || t["Road"] || t["Asset / Road name"]);
-            const start = parseFloat(t[keys[1]] || t["Start"] || 0);
-            const end = parseFloat(t[keys[2]] || t["End"] || 0);
-            return rVal === cleanedCurRoad && curKm >= start && curKm <= end;
-        });
-
-        if (match) {
-            const keys = Object.keys(match);
-            const start = parseFloat(match[keys[1]] || match["Start"]);
-            const end = parseFloat(match[keys[2]] || match["End"]);
-            const name = match[keys[3]] || match["Treatment"];
-
-            let rem = 0;
-            let dir = "Awaiting Movement";
-
-            if (curKm > lastKm) { 
-                dir = "Forward"; 
-                rem = Math.round(end - curKm); 
-            } else if (curKm < lastKm) { 
-                dir = "Backward"; 
-                rem = Math.round(curKm - start); 
-            } else {
-                dir = "Standing Still";
-                rem = Math.round(end - curKm); 
-            }
-
-            const remDisplay = document.getElementById('rem-display');
-            remDisplay.innerText = Math.abs(rem) + "m";
-            
-            // PROXIMITY ALERT: Turns red within 50 meters
-            if (Math.abs(rem) <= 50) {
-                remDisplay.classList.add('proximity-alert');
-            } else {
-                remDisplay.classList.remove('proximity-alert');
-            }
-
-            document.getElementById('treat-display').innerText = name;
-            document.getElementById('dir-label').innerText = dir;
-            document.getElementById('range-display').innerText = `Range: ${Math.round(start)} - ${Math.round(end)}`;
-        } else {
-            document.getElementById('treat-display').innerText = "No Active Treatment";
-            document.getElementById('rem-display').innerText = "---";
-            document.getElementById('rem-display').classList.remove('proximity-alert');
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
+
+        const data = await response.json();
+        const progress = Number(data.progress || 0);
+        const state = data.state || {};
+
+        /*
+          Stable Diffusion WebUI commonly reports:
+
+          state.job_no    = zero-based index of the current image
+          state.job_count = total number of images in the batch
+          progress        = progress of the current image, from 0 to 1
+        */
+
+        const jobNumber = Number(state.job_no || 0);
+        const jobCount = Number(state.job_count || 0);
+
+        let completed = jobNumber;
+        let overall = progress * 100;
+
+        if (jobCount > 0) {
+          /*
+            Calculate batch-wide progress:
+
+            completed images + current image fraction
+            ------------------------------------------------
+                         total images in batch
+          */
+          overall = ((jobNumber + progress) / jobCount) * 100;
+
+          // Count only fully completed images.
+          completed = Math.min(jobNumber, jobCount);
+        }
+
+        setProgress(overall);
+        completedImages.textContent = completed;
+        totalImages.textContent = jobCount || "—";
+
+        if (progress > 0 || jobCount > 0) {
+          status.textContent = jobCount > 0
+            ? `Generating image ${Math.min(jobNumber + 1, jobCount)} of ${jobCount}`
+            : "Generating...";
+        } else {
+          status.textContent = "Idle";
+        }
+
+        if (data.current_image) {
+          previewImage.src = base64ToDataUrl(data.current_image);
+          previewImage.hidden = false;
+        } else {
+          previewImage.hidden = true;
+        }
+
+        errorBox.textContent = "";
+      } catch (error) {
+        status.textContent = "Unable to connect";
+        errorBox.textContent =
+          `Could not reach ${getApiUrl()}.\n` +
+          `Check that Stable Diffusion is running and that CORS is enabled.\n\n` +
+          error.message;
+      }
     }
-</script>
+
+    apiUrlInput.addEventListener("change", updateProgress);
+
+    // Initial request, then refresh every 2 seconds.
+    updateProgress();
+    setInterval(updateProgress, 2000);
+  </script>
 </body>
 </html>
