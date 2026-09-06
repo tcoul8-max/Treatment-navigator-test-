@@ -166,6 +166,13 @@
     const errorBox = document.getElementById("error");
     const previewImage = document.getElementById("previewImage");
 
+    // Load saved API URL from localStorage on startup
+    const SAVED_API_URL_KEY = "sd_progress_api_url";
+    const savedUrl = localStorage.getItem(SAVED_API_URL_KEY);
+    if (savedUrl !== null) {
+      apiUrlInput.value = savedUrl;
+    }
+
     function getApiUrl() {
       return apiUrlInput.value.trim().replace(/\/+$/, "");
     }
@@ -203,14 +210,6 @@
         const progress = Number(data.progress || 0);
         const state = data.state || {};
 
-        /*
-          Stable Diffusion WebUI commonly reports:
-
-          state.job_no    = zero-based index of the current image
-          state.job_count = total number of images in the batch
-          progress        = progress of the current image, from 0 to 1
-        */
-
         const jobNumber = Number(state.job_no || 0);
         const jobCount = Number(state.job_count || 0);
 
@@ -218,16 +217,7 @@
         let overall = progress * 100;
 
         if (jobCount > 0) {
-          /*
-            Calculate batch-wide progress:
-
-            completed images + current image fraction
-            ------------------------------------------------
-                         total images in batch
-          */
           overall = ((jobNumber + progress) / jobCount) * 100;
-
-          // Count only fully completed images.
           completed = Math.min(jobNumber, jobCount);
         }
 
@@ -259,6 +249,12 @@
           error.message;
       }
     }
+
+    // Save API URL to localStorage whenever the user changes or types in it
+    apiUrlInput.addEventListener("input", () => {
+      localStorage.setItem(SAVED_API_URL_KEY, apiUrlInput.value);
+      updateProgress();
+    });
 
     apiUrlInput.addEventListener("change", updateProgress);
 
