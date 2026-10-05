@@ -1,266 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stable Diffusion Progress</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SD Automatic1111 Progress Monitor</title>
+    <style>
+        /* Base Reset & Pitch Black Screen */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-  <style>
-    body {
-      margin: 0;
-      padding: 2rem;
-      font-family: Arial, sans-serif;
-      background: #171717;
-      color: #f5f5f5;
-    }
+        /* Minimalist Add Button in Top Right */
+        #add-btn {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 32px;
+            font-weight: 200;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+        #add-btn:hover {
+            opacity: 1;
+            transform: scale(1.05);
+        }
 
-    .container {
-      max-width: 700px;
-      margin: auto;
-    }
+        /* Main Container centered on display */
+        #monitor-container {
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
 
-    h1 {
-      margin-bottom: 1.5rem;
-    }
+        /* Instance Layout */
+        .instance-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
 
-    .settings,
-    .card {
-      background: #242424;
-      border-radius: 10px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-    }
+        /* Header containing IP text and % readout */
+        .instance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .ip-display {
+            font-size: 13px;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            opacity: 0.5;
+        }
+        .percentage-display {
+            font-size: 14px;
+            font-weight: 300;
+            letter-spacing: 0.02em;
+        }
 
-    label {
-      display: block;
-      margin-bottom: 0.4rem;
-      color: #bbb;
-    }
+        /* Minimalist Progress Bar Track */
+        .progress-track {
+            width: 100%;
+            height: 3px;
+            background-color: #222222;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        /* White Progress Indicator */
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #ffffff;
+            transition: width 0.3s ease;
+        }
 
-    input {
-      box-sizing: border-box;
-      width: 100%;
-      padding: 0.7rem;
-      border: 1px solid #555;
-      border-radius: 6px;
-      background: #111;
-      color: white;
-      font-size: 1rem;
-    }
+        /* Context Subtext (e.g., Offline/Idle status) */
+        .status-subtext {
+            font-size: 11px;
+            font-weight: 300;
+            opacity: 0.25;
+            text-align: right;
+            margin-top: -2px;
+        }
 
-    .progress-container {
-      height: 28px;
-      overflow: hidden;
-      border-radius: 14px;
-      background: #111;
-      margin: 1rem 0;
-    }
-
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #4caf50;
-      transition: width 0.4s ease;
-      font-weight: bold;
-      color: white;
-    }
-
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem;
-      text-align: center;
-    }
-
-    .stat {
-      padding: 1rem 0.5rem;
-      border-radius: 8px;
-      background: #303030;
-    }
-
-    .stat-value {
-      display: block;
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin-bottom: 0.3rem;
-    }
-
-    .stat-label {
-      color: #aaa;
-      font-size: 0.85rem;
-    }
-
-    #status {
-      color: #aaa;
-      margin-top: 1rem;
-    }
-
-    #error {
-      color: #ff7777;
-      margin-top: 0.5rem;
-      white-space: pre-wrap;
-    }
-
-    img {
-      display: block;
-      max-width: 100%;
-      max-height: 300px;
-      margin: 1rem auto 0;
-      border-radius: 8px;
-    }
-  </style>
+        /* Right-click or Hover Remove Button action */
+        .remove-zone {
+            position: absolute;
+            left: -24px;
+            top: 2px;
+            color: #ff4444;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .instance-card:hover .remove-zone {
+            opacity: 0.6;
+        }
+        .remove-zone:hover {
+            opacity: 1 !important;
+        }
+    </style>
 </head>
-
 <body>
-  <main class="container">
-    <h1>Stable Diffusion Progress</h1>
 
-    <section class="settings">
-      <label for="apiUrl">Stable Diffusion API URL</label>
-      <input
-        id="apiUrl"
-        value="http://127.0.0.1:7860"
-        placeholder="http://127.0.0.1:7860"
-      />
-    </section>
+    <!-- Minimalist Controls -->
+    <button id="add-btn" title="Add Automatic1111 Instance">+</button>
 
-    <section class="card">
-      <div class="progress-container">
-        <div id="progressBar" class="progress-bar">0%</div>
-      </div>
+    <!-- Center Display List -->
+    <div id="monitor-container"></div>
 
-      <div class="stats">
-        <div class="stat">
-          <span id="overallPercent" class="stat-value">0%</span>
-          <span class="stat-label">Overall progress</span>
-        </div>
+    <script>
+        const container = document.getElementById('monitor-container');
+        const addBtn = document.getElementById('add-btn');
+        
+        // Retrieve saved instances or default to localhost if empty
+        let instances = JSON.parse(localStorage.getItem('sd_tracked_ips')) || [];
 
-        <div class="stat">
-          <span id="completedImages" class="stat-value">0</span>
-          <span class="stat-label">Images completed</span>
-        </div>
-
-        <div class="stat">
-          <span id="totalImages" class="stat-value">0</span>
-          <span class="stat-label">Total images</span>
-        </div>
-      </div>
-
-      <div id="status">Waiting for generation...</div>
-      <div id="error"></div>
-
-      <img id="previewImage" alt="Current Stable Diffusion preview" hidden />
-    </section>
-  </main>
-
-  <script>
-    const apiUrlInput = document.getElementById("apiUrl");
-    const progressBar = document.getElementById("progressBar");
-    const overallPercent = document.getElementById("overallPercent");
-    const completedImages = document.getElementById("completedImages");
-    const totalImages = document.getElementById("totalImages");
-    const status = document.getElementById("status");
-    const errorBox = document.getElementById("error");
-    const previewImage = document.getElementById("previewImage");
-
-    // Load saved API URL from localStorage on startup
-    const SAVED_API_URL_KEY = "sd_progress_api_url";
-    const savedUrl = localStorage.getItem(SAVED_API_URL_KEY);
-    if (savedUrl !== null) {
-      apiUrlInput.value = savedUrl;
-    }
-
-    function getApiUrl() {
-      return apiUrlInput.value.trim().replace(/\/+$/, "");
-    }
-
-    function setProgress(percent) {
-      const safePercent = Math.max(0, Math.min(100, percent));
-      const roundedPercent = Math.round(safePercent);
-
-      progressBar.style.width = `${safePercent}%`;
-      progressBar.textContent = `${roundedPercent}%`;
-      overallPercent.textContent = `${roundedPercent}%`;
-    }
-
-    function base64ToDataUrl(base64) {
-      if (!base64) return "";
-      return base64.startsWith("data:image")
-        ? base64
-        : `data:image/jpeg;base64,${base64}`;
-    }
-
-    async function updateProgress() {
-      try {
-        const response = await fetch(
-          `${getApiUrl()}/sdapi/v1/progress?skip_current_image=false`,
-          {
-            cache: "no-store"
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        // Save layout configuration
+        function saveToStorage() {
+            localStorage.setItem('sd_tracked_ips', JSON.stringify(instances));
         }
 
-        const data = await response.json();
-        const progress = Number(data.progress || 0);
-        const state = data.state || {};
+        // Initialize UI Elements
+        function renderInstances() {
+            container.innerHTML = '';
+            if (instances.length === 0) {
+                container.innerHTML = '<div style="text-align:center; opacity:0.2; font-size:13px; font-weight:300;">No instances monitored. Click + to add.</div>';
+                return;
+            }
 
-        const jobNumber = Number(state.job_no || 0);
-        const jobCount = Number(state.job_count || 0);
+            instances.forEach((ip, index) => {
+                const card = document.createElement('div');
+                card.className = 'instance-card';
+                card.id = `node-${index}`;
 
-        let completed = jobNumber;
-        let overall = progress * 100;
-
-        if (jobCount > 0) {
-          overall = ((jobNumber + progress) / jobCount) * 100;
-          completed = Math.min(jobNumber, jobCount);
+                card.innerHTML = `
+                    <div class="remove-zone" onclick="removeInstance(${index})" title="Remove">×</div>
+                    <div class="instance-header">
+                        <span class="ip-display">${ip}</span>
+                        <span class="percentage-display" id="pct-${index}">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-bar" id="bar-${index}"></div>
+                    </div>
+                    <div class="status-subtext" id="status-${index}">connecting...</div>
+                `;
+                container.appendChild(card);
+            });
         }
 
-        setProgress(overall);
-        completedImages.textContent = completed;
-        totalImages.textContent = jobCount || "—";
+        // Prompt window for configuration
+        addBtn.addEventListener('click', () => {
+            let ipInput = prompt("Enter the Automatic1111 WebUI address:\n(e.g., 127.0.0.1:7860 or 192.168.1.50:7860)");
+            if (ipInput) {
+                // Ensure proper structure format
+                ipInput = ipInput.trim().replace(/^(https?:\/\/)?/, '');
+                if (!ipInput.includes(':')) {
+                    ipInput += ':7860'; // Append standard UI port if missing
+                }
+                if (!instances.includes(ipInput)) {
+                    instances.push(ipInput);
+                    saveToStorage();
+                    renderInstances();
+                    fetchProgressForInstance(instances.length - 1);
+                }
+            }
+        });
 
-        if (progress > 0 || jobCount > 0) {
-          status.textContent = jobCount > 0
-            ? `Generating image ${Math.min(jobNumber + 1, jobCount)} of ${jobCount}`
-            : "Generating...";
-        } else {
-          status.textContent = "Idle";
+        window.removeInstance = function(index) {
+            instances.splice(index, 1);
+            saveToStorage();
+            renderInstances();
+        };
+
+        // Async API tracking polling loop
+        async function fetchProgressForInstance(index) {
+            const ip = instances[index];
+            if (!ip) return; // Safeguard if deleted midway
+
+            const barEl = document.getElementById(`bar-${index}`);
+            const pctEl = document.getElementById(`pct-${index}`);
+            const statusEl = document.getElementById(`status-${index}`);
+
+            if (!barEl || !pctEl || !statusEl) return;
+
+            try {
+                // Using standard http target. Adjust scheme if running strictly on SSL/HTTPS
+                const response = await fetch(`http://${ip}/sdapi/v1/progress?skip_current_image=true`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                if (!response.ok) throw new Error('API Error');
+
+                const data = await response.json();
+                
+                // Progress is returned as a float value between 0.0 and 1.0
+                const rawProgress = data.progress || 0;
+                const percentage = Math.round(rawProgress * 100);
+                
+                // Update elements dynamically
+                barEl.style.width = `${percentage}%`;
+                pctEl.innerText = `${percentage}%`;
+
+                if (rawProgress > 0) {
+                    const eta = data.eta_relative ? `${Math.round(data.eta_relative)}s remaining` : 'processing';
+                    statusEl.innerText = eta;
+                } else {
+                    statusEl.innerText = 'idle';
+                }
+
+            } catch (err) {
+                // Fallback gracefully on local network blocking context or closed server
+                statusEl.innerText = 'offline / cors blocked';
+                barEl.style.width = '0%';
+                pctEl.innerText = '0%';
+            }
+
+            // Continuous polling sequence loop every 1 second
+            setTimeout(() => fetchProgressForInstance(index), 1000);
         }
 
-        if (data.current_image) {
-          previewImage.src = base64ToDataUrl(data.current_image);
-          previewImage.hidden = false;
-        } else {
-          previewImage.hidden = true;
+        // Run checking loops globally
+        function initMonitor() {
+            renderInstances();
+            instances.forEach((_, idx) => {
+                fetchProgressForInstance(idx);
+            });
         }
 
-        errorBox.textContent = "";
-      } catch (error) {
-        status.textContent = "Unable to connect";
-        errorBox.textContent =
-          `Could not reach ${getApiUrl()}.\n` +
-          `Check that Stable Diffusion is running and that CORS is enabled.\n\n` +
-          error.message;
-      }
-    }
-
-    // Save API URL to localStorage whenever the user changes or types in it
-    apiUrlInput.addEventListener("input", () => {
-      localStorage.setItem(SAVED_API_URL_KEY, apiUrlInput.value);
-      updateProgress();
-    });
-
-    apiUrlInput.addEventListener("change", updateProgress);
-
-    // Initial request, then refresh every 2 seconds.
-    updateProgress();
-    setInterval(updateProgress, 2000);
-  </script>
+        initMonitor();
+    </script>
 </body>
 </html>
